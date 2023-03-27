@@ -95,10 +95,10 @@ namespace Snake
             }
             if (_food != null) 
             {
-                if (depth <= maxDepth && maxDepth > 0)
+                if (depth <= maxDepth && maxDepth > 0 && board.Food[0] != Mid)
                 {
                     var copy = new Coordinate[depth+1];
-                    if (board.Food.Count() == depth + 1 && !mid && board.Food[0] != Mid)
+                    if (board.Food.Count() == depth + 1 && !mid)
                     {
 
                         for (int i = 0; i < board.Food.Count(); i++)

@@ -64,17 +64,64 @@ namespace Snake
 
             queue.Enqueue(new Point(point.X, point.Y));
 
+            List<Point> firsPoints = new List<Point>();
+
             do
             {
                 direction = BFS(queue, check, board, depth, mid);
 
                 if (direction != null)
                     break;
+
+                if (firsPoints.Count == 0)
+                    firsPoints.AddRange(queue);
             } while (queue.Count() > 0);
+
+            if (firsPoints.Count == 2 && direction == null)
+                direction = BetterDirection(board, point, check);
 
             return direction;
         }
 
+        private Direction BetterDirection(Board board, Coordinate point, Dictionary<Vector2, bool> check)
+        {
+            Direction? direction = null;
+
+            int dir1 = 0, dir2 = 0;
+
+            if (check.TryGetValue(new Vector2(point.X - 1, point.Y), out _))
+                dir1 = -1;
+            if (check.TryGetValue(new Vector2(point.X + 1, point.Y), out _))
+                dir1 = +1;
+            if (check.TryGetValue(new Vector2(point.X, point.Y - 1), out _))
+                dir2 = -1;
+            if (check.TryGetValue(new Vector2(point.X, point.Y + 1), out _))
+                dir2 = +1;
+
+            check.Remove(new Vector2(point.X, point.Y));
+
+            int dir1count = 0, dir2count = 0;
+
+            CountOFPoints(board, check, point.X + dir1, point.Y, ref dir1count);
+            CountOFPoints(board, check, point.X, point.Y + dir2, ref dir2count);
+
+            if (dir1count > dir2count)
+                return dir1 != -1 ? Direction.Right : Direction.Left;
+            else 
+                return dir2 != -1 ? Direction.Up : Direction.Down;
+        }
+
+        private void CountOFPoints(Board board, Dictionary<Vector2, bool> check, int x, int y, ref int count)
+        {
+            if (check[new Vector2(x, y)]) { count++; }
+
+            for (int _x = -1; _x < 2; _x += 2)
+                if (check.TryGetValue(new Vector2(x + _x, y), out _) && CheckBoundries(board, _x + x, y))
+                    CountOFPoints(board, check, _x + x, y, ref count);
+            for (int _y = -1; _y < 2; _y += 2)
+                if (check.TryGetValue(new Vector2(x, y + _y), out _) && CheckBoundries(board, x, _y + y))
+                    CountOFPoints(board, check, x, _y + y, ref count);
+        }
 
         private Direction? BFS(Queue<Point> queue, Dictionary<Vector2, bool> check, Board board, int depth = 0, bool mid = false) 
         {
@@ -185,12 +232,19 @@ namespace Snake
                     queue.Enqueue(new Point(point.X, point.Y + y, point));
         }
 
-        private bool CheckCollision(Board board, int x, int y)
+        private bool CheckBoundries(Board board, int x, int y) 
         {
             if (x < 0) { return false; }
             if (y < 0) { return false; }
             if (x > board.Width - 1) { return false; }
             if (y > board.Height - 1) { return false; }
+
+            return true;
+        }
+
+        private bool CheckCollision(Board board, int x, int y)
+        {
+            if (!CheckBoundries(board, x, y)) return false; 
 
             foreach (var arr in new List<Coordinate[]>(board.Snakes.Where(s => s.Alive).Select(s => s.Body)) { board.Obstacles })
             {

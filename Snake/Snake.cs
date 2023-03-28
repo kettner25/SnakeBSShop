@@ -35,6 +35,8 @@ namespace Snake
         // dostane data hry, vraci smer pohybu hada
         public Direction Move(Game game)
         {
+            if (!game.You.Alive) return Direction.Left;
+
             Mid = Mid ?? new Coordinate() { X = (int)(game.Board.Width / 2), Y = (int)(game.Board.Height / 2) };
 
             Direction? direction = null;
@@ -44,7 +46,8 @@ namespace Snake
             if (game.Board.Food.Length == 0)
             {
                 //TODO
-                game.Board.Food = new Coordinate[] { Mid };
+                if (CheckCollision(game.Board, Mid.X, Mid.Y)) 
+                    game.Board.Food = new Coordinate[] { Mid };
             }
 
             direction = InitBFS(game.Board, game.You.Head);
@@ -95,18 +98,17 @@ namespace Snake
             }
             if (_food != null) 
             {
-                if (depth <= maxDepth && maxDepth > 0 && board.Food[0] != Mid)
+                if (depth < maxDepth && maxDepth > 0 && board.Food[0] != Mid)
                 {
-                    var copy = new Coordinate[depth+1];
-                    if (board.Food.Count() == depth + 1 && !mid)
+                    var copy = new Coordinate[board.Food.Count() + 1];
+                    if (board.Food.Count() == depth + 1 && !mid && CheckCollision(board, Mid.X, Mid.Y))
                     {
-
                         for (int i = 0; i < board.Food.Count(); i++)
                         {
                             copy[i] = board.Food[i];
                         }
 
-                        copy[depth] = Mid;
+                        copy[board.Food.Count()] = Mid;
 
                         mid = true;
                     }
@@ -124,9 +126,11 @@ namespace Snake
                     if (point.PrewPoint != null)
                         _boa.Obstacles[board.Obstacles.Length] = new Coordinate() { X = point.PrewPoint.X, Y = point.PrewPoint.Y };
 
-                    Direction? dir = InitBFS(board, new Coordinate() { X = point.X, Y = point.Y }, depth+1, mid);
+                    Direction? dir = InitBFS(_boa, new Coordinate() { X = point.X, Y = point.Y }, depth+1, mid);
 
-                    if (dir != null) { return null; }
+                    if (dir == null) { 
+                        return null; 
+                    }
                 }
                 return point.GetDirection();
             }

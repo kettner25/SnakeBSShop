@@ -1,5 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Eventing.Reader;
 using System.Drawing;
+using System.Linq;
 using System.Numerics;
 using static Snake.Snake;
 
@@ -77,50 +80,65 @@ namespace Snake
                     firsPoints.AddRange(queue);
             } while (queue.Count() > 0);
 
-            /*if (firsPoints.Count == 2 && direction == null)
-                direction = BetterDirection(board, point, check);*/
+            if (depth == 0 && direction == null)
+                direction = BetterDirection(board, point, check);//*/
 
             return direction;
         }
 
-        private Direction BetterDirection(Board board, Coordinate point, Dictionary<Vector2, bool> check)
+        private Direction? BetterDirection(Board board, Coordinate point, Dictionary<Vector2, bool> check)
         {
             Direction? direction = null;
 
-            int dir1 = 0, dir2 = 0;
+            List<Coordinate> dirs = new();
 
-            if (check.TryGetValue(new Vector2(point.X - 1, point.Y), out _))
-                dir1 = -1;
-            if (check.TryGetValue(new Vector2(point.X + 1, point.Y), out _))
-                dir1 = +1;
-            if (check.TryGetValue(new Vector2(point.X, point.Y - 1), out _))
-                dir2 = -1;
-            if (check.TryGetValue(new Vector2(point.X, point.Y + 1), out _))
-                dir2 = +1;
+            if (check.ContainsKey(new Vector2(point.X - 1, point.Y)))
+                dirs.Add(new Coordinate() { X = -1, Y = 0 });
+            if (check.ContainsKey(new Vector2(point.X + 1, point.Y)))
+                dirs.Add(new Coordinate() { X = 1, Y = 0 });
+            if (check.ContainsKey(new Vector2(point.X, point.Y - 1)))
+                dirs.Add(new Coordinate() { X = 0, Y = -1 });
+            if (check.ContainsKey(new Vector2(point.X, point.Y + 1)))
+                dirs.Add(new Coordinate() { X = 0, Y = 1 });
+
+            int[] dirCounts = new int[dirs.Count];
 
             check.Remove(new Vector2(point.X, point.Y));
 
-            int dir1count = 0, dir2count = 0;
+            if (check.Count == 0) return null;
+            
+            for (int i = 0; i < dirs.Count; i++)
+            {
+                var dircount = 0;
+                CountOFPoints(board, check, point.X + dirs[i].X, point.Y + dirs[i].Y, ref dircount, new());
+                dirCounts[i] = dircount;
+            }
 
-            CountOFPoints(board, check, point.X + dir1, point.Y, ref dir1count);
-            CountOFPoints(board, check, point.X, point.Y + dir2, ref dir2count);
-
-            if (dir1count > dir2count)
-                return dir1 != -1 ? Direction.Right : Direction.Left;
-            else 
-                return dir2 != -1 ? Direction.Up : Direction.Down;
+            var a = dirs[dirCounts.ToList().IndexOf(dirCounts.Max())];
+            if (a.X != 0)
+                if (a.X == -1)
+                    return Direction.Left;
+                else return Direction.Right;
+            else
+                if (a.Y == -1)
+                return Direction.Down;
+            else return Direction.Up;
         }
 
-        private void CountOFPoints(Board board, Dictionary<Vector2, bool> check, int x, int y, ref int count)
+        private void CountOFPoints(Board board, Dictionary<Vector2, bool> freePoints, int x, int y, ref int count, Dictionary<Vector2, bool> check)
         {
-            if (check[new Vector2(x, y)]) { count++; }
+            if (check.ContainsKey(new Vector2(x, y))) return;
+
+            check.Add(new Vector2(x,y), true);
+
+            if (freePoints.ContainsKey(new Vector2(x, y))) { count++; }
 
             for (int _x = -1; _x < 2; _x += 2)
-                if (check.TryGetValue(new Vector2(x + _x, y), out _) && CheckBoundries(board, _x + x, y))
-                    CountOFPoints(board, check, _x + x, y, ref count);
+                if (freePoints.ContainsKey(new Vector2(x + _x, y)) && CheckBoundries(board, _x + x, y))
+                    CountOFPoints(board, freePoints, x + _x, y, ref count, check);
             for (int _y = -1; _y < 2; _y += 2)
-                if (check.TryGetValue(new Vector2(x, y + _y), out _) && CheckBoundries(board, x, _y + y))
-                    CountOFPoints(board, check, x, _y + y, ref count);
+                if (freePoints.ContainsKey(new Vector2(x, y + _y)) && CheckBoundries(board, x, _y + y))
+                    CountOFPoints(board, freePoints, x, y + _y, ref count, check);
         }
 
         private Direction? BFS(Queue<Point> queue, Dictionary<Vector2, bool> check, Board board, int depth = 0, bool mid = false) 
@@ -143,7 +161,7 @@ namespace Snake
                     break;
                 }
             }
-            if (_food != null) 
+            if (_food != null && _food != Mid) 
             {
                 if (depth < maxDepth && maxDepth > 0 && board.Food[0] != Mid)
                 {
@@ -268,74 +286,5 @@ namespace Snake
 
             return true;
         }
-        //*/
-
-        /*
-        private void AddToQueue(Queue<Point> queue, Point point, Board board)
-        {
-            int x, y;
-
-            if (point.X > 0)
-            {
-                x = point.X - 1;
-                y = point.Y;
-
-                if (CheckCollision(board, x, y))
-                    queue.Enqueue(new (x, y, point));
-            }
-
-            if (point.Y > 0)
-            {
-                x = point.X;
-                y = point.Y - 1;
-
-                if (CheckCollision(board, x, y))
-                    queue.Enqueue(new(x, y, point));
-            }
-
-            if (point.X < board.Width - 1)
-            {
-                x = point.X + 1;
-                y = point.Y;
-
-                if (CheckCollision(board, x, y))
-                    queue.Enqueue(new(x, y, point));
-            }
-
-            if (point.Y < board.Height - 1)
-            {
-                x = point.X;
-                y = point.Y + 1;
-
-                if (CheckCollision(board, x, y))
-                    queue.Enqueue(new(x, y, point));
-            }
-        }
-
-        private bool CheckCollision(Board board, int x, int y)
-        {
-            foreach (var arr in new List<Coordinate[]>(board.Snakes.Select(s => s.Body)) { board.Obstacles })
-            {
-                foreach (var ob in arr ?? new Coordinate[0])
-                {
-                    if (ob.X == x && ob.Y == y)
-                    {
-                        return false;
-                    }
-                }
-            }
-
-            foreach (var head in new List<Coordinate>(board.Snakes.Where(s => s.Head != null).Select(s => s.Head)) { })
-            {
-                if (head.X - 1 == x && head.Y == y) { return false; }
-                if (head.X + 1 == x && head.Y == y) { return false; }
-                if (head.X == x && head.Y - 1 == y) { return false; }
-                if (head.X == x && head.Y + 1 == y) { return false; }
-                if (head.X == x && head.Y == y) { return false; }
-            }
-
-            return true;
-        } //*/
-
     }
 }

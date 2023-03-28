@@ -77,8 +77,8 @@ namespace Snake
                     firsPoints.AddRange(queue);
             } while (queue.Count() > 0);
 
-            if (firsPoints.Count == 2 && direction == null)
-                direction = BetterDirection(board, point, check);
+            /*if (firsPoints.Count == 2 && direction == null)
+                direction = BetterDirection(board, point, check);*/
 
             return direction;
         }

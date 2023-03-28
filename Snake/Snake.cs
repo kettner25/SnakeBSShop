@@ -2,8 +2,10 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Eventing.Reader;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
 using System.Numerics;
+using System.Security.Cryptography;
 using static Snake.Snake;
 
 namespace Snake
@@ -67,28 +69,44 @@ namespace Snake
 
             queue.Enqueue(new Point(point.X, point.Y));
 
-            List<Point> firsPoints = new List<Point>();
+            direction = BFS(queue, check, board, depth, mid);
 
-            do
+            if (depth == 0)
+            {
+                var worst = WorstDirection(board, point);
+                if (worst != null)
+                    queue = new(queue.Where(p => p.X != worst.X || p.Y != worst.Y));
+            }
+
+            while (queue.Count() > 0)
             {
                 direction = BFS(queue, check, board, depth, mid);
 
                 if (direction != null)
                     break;
-
-                if (firsPoints.Count == 0)
-                    firsPoints.AddRange(queue);
-            } while (queue.Count() > 0);
-
-            if (depth == 0 && direction == null)
-                direction = BetterDirection(board, point, check);//*/
+            } 
 
             return direction;
         }
 
-        private Direction? BetterDirection(Board board, Coordinate point, Dictionary<Vector2, bool> check)
+        private Point? WorstDirection(Board board, Coordinate point)
         {
             Direction? direction = null;
+
+            Queue<Point> queue = new();
+            Dictionary<Vector2, bool> check = new();
+
+            queue.Enqueue(new Point(point.X, point.Y));
+
+            Board _board = new Board() { Height = board.Height, Width = board.Height, Obstacles = board.Obstacles, Snakes = board.Snakes };
+
+            while (queue.Count() > 0)
+            {
+                BFS(queue, check, _board, 0, false);
+
+                if (direction != null)
+                    break;
+            }
 
             List<Coordinate> dirs = new();
 
@@ -114,7 +132,13 @@ namespace Snake
                 dirCounts[i] = dircount;
             }
 
-            var a = dirs[dirCounts.ToList().IndexOf(dirCounts.Max())];
+            var a = dirs[dirCounts.ToList().IndexOf(dirCounts.Min())];
+
+            if (dirCounts.ToList().Where(m => m == dirCounts.Min()).Count() > 1 || dirCounts.Count() <= 1)
+                return null;
+
+            return new Point(point.X + a.X, point.Y + a.Y);
+            /*
             if (a.X != 0)
                 if (a.X == -1)
                     return Direction.Left;
@@ -123,6 +147,7 @@ namespace Snake
                 if (a.Y == -1)
                 return Direction.Down;
             else return Direction.Up;
+            //*/
         }
 
         private void CountOFPoints(Board board, Dictionary<Vector2, bool> freePoints, int x, int y, ref int count, Dictionary<Vector2, bool> check)
@@ -211,30 +236,32 @@ namespace Snake
         {
             Direction? direction = null;
 
+            var worstPoint = WorstDirection(board, point);
+
             int x, y;
 
             x = point.X - 1;
             y = point.Y;
 
-            if (CheckCollision(board, x, y))
+            if (CheckCollision(board, x, y) && (worstPoint?.X != x || worstPoint?.Y != y))
                 return Direction.Left;
             
             x = point.X;
             y = point.Y - 1;
 
-            if (CheckCollision(board, x, y))
+            if (CheckCollision(board, x, y) && (worstPoint?.X != x || worstPoint?.Y != y))
                 return Direction.Down;
 
             x = point.X + 1;
             y = point.Y;
 
-            if (CheckCollision(board, x, y))
+            if (CheckCollision(board, x, y) && (worstPoint?.X != x || worstPoint?.Y != y))
                 return Direction.Right;
 
             x = point.X;
             y = point.Y + 1;
 
-            if (CheckCollision(board, x, y))
+            if (CheckCollision(board, x, y) && (worstPoint?.X != x || worstPoint?.Y != y))
                 return Direction.Up;
 
             return direction ?? Direction.Up;

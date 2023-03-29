@@ -233,7 +233,7 @@ namespace Snake
             return direction;
         }
 
-        private Direction RandMove(Board board, Coordinate point)
+        private Direction RandMove(Board board, Coordinate point, bool wOffset = true)
         {
             Direction? direction = null;
 
@@ -244,26 +244,29 @@ namespace Snake
             x = point.X - 1;
             y = point.Y;
 
-            if (CheckCollision(board, x, y) && worsts?.FirstOrDefault(w => w.X == x && w.Y == y) == null)
+            if (CheckCollision(board, x, y, wOffset) && worsts?.FirstOrDefault(w => w.X == x && w.Y == y) == null)
                 return Direction.Left;
             
             x = point.X;
             y = point.Y - 1;
 
-            if (CheckCollision(board, x, y) && worsts?.FirstOrDefault(w => w.X == x && w.Y == y) == null)
+            if (CheckCollision(board, x, y, wOffset) && worsts?.FirstOrDefault(w => w.X == x && w.Y == y) == null)
                 return Direction.Down;
 
             x = point.X + 1;
             y = point.Y;
 
-            if (CheckCollision(board, x, y) && worsts?.FirstOrDefault(w => w.X == x && w.Y == y) == null)
+            if (CheckCollision(board, x, y, wOffset) && worsts?.FirstOrDefault(w => w.X == x && w.Y == y) == null)
                 return Direction.Right;
 
             x = point.X;
             y = point.Y + 1;
 
-            if (CheckCollision(board, x, y) && worsts?.FirstOrDefault(w => w.X == x && w.Y == y) == null)
+            if (CheckCollision(board, x, y, wOffset) && worsts?.FirstOrDefault(w => w.X == x && w.Y == y) == null)
                 return Direction.Up;
+
+            if (direction == null && wOffset)
+                return RandMove(board, point, false);
 
             return direction ?? Direction.Up;
         }
@@ -278,19 +281,21 @@ namespace Snake
                     queue.Enqueue(new Point(point.X, point.Y + y, point));
         }
 
-        private bool CheckBoundries(Board board, int x, int y) 
+        private bool CheckBoundries(Board board, int x, int y, bool rand = false) 
         {
-            if (x < 0) { return false; }
-            if (y < 0) { return false; }
-            if (x > board.Width - 1) { return false; }
-            if (y > board.Height - 1) { return false; }
+            int offset = rand ? 1 : 0;
+
+            if (x < 0 + offset) { return false; }
+            if (y < 0 + offset) { return false; }
+            if (x > board.Width - (1+offset)) { return false; }
+            if (y > board.Height - (1+offset)) { return false; }
 
             return true;
         }
 
-        private bool CheckCollision(Board board, int x, int y)
+        private bool CheckCollision(Board board, int x, int y, bool rand = false)
         {
-            if (!CheckBoundries(board, x, y)) return false; 
+            if (!CheckBoundries(board, x, y, rand)) return false; 
 
             foreach (var arr in new List<Coordinate[]>(board.Snakes.Where(s => s.Alive).Select(s => s.Body)) { board.Obstacles })
             {

@@ -75,7 +75,7 @@ namespace Snake
             {
                 var worst = WorstDirection(board, point);
                 if (worst != null)
-                    queue = new(queue.Where(p => p.X != worst.X || p.Y != worst.Y));
+                    queue = new(queue.Where(p => worst.FirstOrDefault(w => w.X == p.X && w.Y == p.Y) == null));
             }
 
             while (queue.Count() > 0)
@@ -89,7 +89,7 @@ namespace Snake
             return direction;
         }
 
-        private Point? WorstDirection(Board board, Coordinate point)
+        private List<Coordinate>? WorstDirection(Board board, Coordinate point)
         {
             Direction? direction = null;
 
@@ -108,36 +108,37 @@ namespace Snake
                     break;
             }
 
-            List<Coordinate> dirs = new();
+            Dictionary<Coordinate, int> dirs = new();
 
             if (check.ContainsKey(new Vector2(point.X - 1, point.Y)))
-                dirs.Add(new Coordinate() { X = -1, Y = 0 });
+                dirs.Add(new Coordinate() { X = -1, Y = 0 }, 0);
             if (check.ContainsKey(new Vector2(point.X + 1, point.Y)))
-                dirs.Add(new Coordinate() { X = 1, Y = 0 });
+                dirs.Add(new Coordinate() { X = 1, Y = 0 }, 0);
             if (check.ContainsKey(new Vector2(point.X, point.Y - 1)))
-                dirs.Add(new Coordinate() { X = 0, Y = -1 });
+                dirs.Add(new Coordinate() { X = 0, Y = -1 }, 0);
             if (check.ContainsKey(new Vector2(point.X, point.Y + 1)))
-                dirs.Add(new Coordinate() { X = 0, Y = 1 });
-
-            int[] dirCounts = new int[dirs.Count];
+                dirs.Add(new Coordinate() { X = 0, Y = 1 }, 0);
 
             check.Remove(new Vector2(point.X, point.Y));
 
             if (check.Count == 0) return null;
             
-            for (int i = 0; i < dirs.Count; i++)
+            foreach (var dir in dirs)
             {
                 var dircount = 0;
-                CountOFPoints(board, check, point.X + dirs[i].X, point.Y + dirs[i].Y, ref dircount, new());
-                dirCounts[i] = dircount;
+                CountOFPoints(board, check, point.X + dir.Key.X, point.Y + dir.Key.Y, ref dircount, new());
+                dirs[dir.Key] = dircount;
             }
 
-            var a = dirs[dirCounts.ToList().IndexOf(dirCounts.Min())];
+            var mins = new List<Coordinate>();
 
-            if (dirCounts.ToList().Where(m => m == dirCounts.Min()).Count() > 1 || dirCounts.Count() <= 1)
+            if (dirs.Where(m => m.Value == dirs.MinBy(d => d.Value).Value).Count() == dirs.Count() || dirs.Count() <= 1)
                 return null;
 
-            return new Point(point.X + a.X, point.Y + a.Y);
+            foreach (var dir in dirs.Where(d => d.Value == dirs.MinBy(d => d.Value).Value).Select(d => d.Key))
+                mins.Add(new Coordinate() { X = point.X + dir.X, Y = point.Y + dir.Y});
+
+            return mins;
             /*
             if (a.X != 0)
                 if (a.X == -1)
@@ -191,7 +192,7 @@ namespace Snake
                 if (depth < maxDepth && maxDepth > 0 && board.Food[0] != Mid)
                 {
                     var copy = new Coordinate[board.Food.Count() + 1];
-                    if (board.Food.Count() == depth + 1 && !mid && CheckCollision(board, Mid.X, Mid.Y))
+                    if (board.Food.Length == depth + 1 && !mid && CheckCollision(board, Mid.X, Mid.Y))
                     {
                         for (int i = 0; i < board.Food.Count(); i++)
                         {
@@ -236,32 +237,32 @@ namespace Snake
         {
             Direction? direction = null;
 
-            var worstPoint = WorstDirection(board, point);
+            var worsts = WorstDirection(board, point);
 
             int x, y;
 
             x = point.X - 1;
             y = point.Y;
 
-            if (CheckCollision(board, x, y) && (worstPoint?.X != x || worstPoint?.Y != y))
+            if (CheckCollision(board, x, y) && worsts?.FirstOrDefault(w => w.X == x && w.Y == y) == null)
                 return Direction.Left;
             
             x = point.X;
             y = point.Y - 1;
 
-            if (CheckCollision(board, x, y) && (worstPoint?.X != x || worstPoint?.Y != y))
+            if (CheckCollision(board, x, y) && worsts?.FirstOrDefault(w => w.X == x && w.Y == y) == null)
                 return Direction.Down;
 
             x = point.X + 1;
             y = point.Y;
 
-            if (CheckCollision(board, x, y) && (worstPoint?.X != x || worstPoint?.Y != y))
+            if (CheckCollision(board, x, y) && worsts?.FirstOrDefault(w => w.X == x && w.Y == y) == null)
                 return Direction.Right;
 
             x = point.X;
             y = point.Y + 1;
 
-            if (CheckCollision(board, x, y) && (worstPoint?.X != x || worstPoint?.Y != y))
+            if (CheckCollision(board, x, y) && worsts?.FirstOrDefault(w => w.X == x && w.Y == y) == null)
                 return Direction.Up;
 
             return direction ?? Direction.Up;
